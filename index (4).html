@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>THREADS Command Center</title>
+  <style>
+    :root{--bg:#080808;--panel:#111;--panel2:#171717;--line:#252525;--text:#f4f4f4;--muted:#888;--red:#e10600;--red2:#8f0000}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Arial,Helvetica,sans-serif;background:radial-gradient(circle at top,#131313 0%,#080808 60%);color:var(--text)}
+    .shell{display:grid;grid-template-columns:280px 1fr;min-height:100vh}
+    .sidebar{padding:24px;border-right:1px solid var(--line);background:rgba(0,0,0,.4);display:flex;flex-direction:column}
+    .brand{display:flex;align-items:center;gap:12px;margin-bottom:24px}
+    .orb{width:13px;height:13px;border-radius:50%;background:var(--red);box-shadow:0 0 18px rgba(225,6,0,.55);flex-shrink:0}
+    .brand h1{margin:0;font-size:20px;line-height:1.05;text-transform:uppercase;letter-spacing:.08em}
+    .sub{color:var(--muted);font-size:12px;line-height:1.5;margin-top:4px}
+    .menu{display:grid;gap:8px;margin-bottom:24px}
+    .menu button{background:var(--panel);border:1px solid var(--line);color:#ccc;padding:11px 14px;border-radius:12px;font-size:13px;text-align:left;cursor:pointer;transition:.15s}
+    .menu button.on,.menu button:hover{border-color:rgba(225,6,0,.5);background:rgba(225,6,0,.09);color:#fff}
+    .note{color:var(--muted);font-size:12px;line-height:1.6;margin-top:auto;padding-top:24px}
+    .main{padding:24px;display:flex;flex-direction:column;gap:18px}
+    .topbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px}
+    .topbar h2{margin:0;font-size:28px}.topbar p{margin:5px 0 0;color:var(--muted);font-size:13px}
+    .badge{border:1px solid rgba(225,6,0,.35);background:rgba(225,6,0,.1);padding:9px 14px;border-radius:999px;font-size:12px;text-transform:uppercase;letter-spacing:.08em}
+    .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+    .stat{background:linear-gradient(180deg,#111 0%,#141414 100%);border:1px solid var(--line);border-radius:16px;padding:16px}
+    .stat .lbl{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.1em}
+    .stat .val{font-size:28px;font-weight:700;margin-top:8px;line-height:1}
+    .stat .desc{font-size:12px;color:#bbb;margin-top:6px}
+    .filters{display:flex;gap:10px;flex-wrap:wrap}
+    .filters button{background:#151515;border:1px solid var(--line);color:#bbb;padding:8px 14px;border-radius:999px;font-size:12px;cursor:pointer;text-transform:uppercase;letter-spacing:.06em;transition:.15s}
+    .filters button.on,.filters button:hover{border-color:rgba(225,6,0,.5);background:rgba(225,6,0,.09);color:#fff}
+    #idea-pool{display:grid;gap:12px}
+    .idea-card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;display:grid;gap:8px}
+    .idea-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap}
+    .idea-source{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--red);font-weight:700}
+    .idea-cat{font-size:11px;text-transform:uppercase;letter-spacing:.08em;padding:4px 9px;border-radius:999px;border:1px solid #333;background:#191919;color:#bbb}
+    .idea-title{font-size:15px;font-weight:700;line-height:1.35}
+    .idea-snippet{font-size:13px;color:var(--muted);line-height:1.6}
+    .idea-foot{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:4px}
+    .score-bar{height:4px;background:#1e1e1e;border-radius:2px;flex:1;min-width:80px}
+    .score-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--red2),var(--red))}
+    .score-lbl{font-size:11px;color:var(--muted)}
+    .idea-actions{display:flex;gap:8px}
+    .idea-actions button{border:none;border-radius:10px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer}
+    .btn-approve{background:var(--red);color:#fff}
+    .btn-draft{background:#1c1c1c;color:#ccc;border:1px solid #333}
+    .btn-skip{background:transparent;color:var(--muted);border:1px solid #252525;font-size:11px}
+    .status-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px;flex-shrink:0;vertical-align:middle}
+    .dot-high{background:#e10600;box-shadow:0 0 8px rgba(225,6,0,.5)}
+    .dot-queue{background:#555}
+    .dot-draft{background:#e18600}
+    .panels{display:grid;grid-template-columns:2fr 1fr;gap:14px}
+    .panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px}
+    .panel h3{margin:0 0 14px;font-size:13px;text-transform:uppercase;letter-spacing:.1em;color:#ddd}
+    .wf-list{display:grid;gap:10px}
+    .wf-item{padding:12px;border:1px solid var(--line);border-radius:12px;background:#151515}
+    .wf-item strong{font-size:13px;display:block;margin-bottom:4px}
+    .wf-item span{color:var(--muted);font-size:12px;line-height:1.5}
+    .main-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+    .main-actions button,.btn-primary,.btn-ghost{padding:12px 16px;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;border:none}
+    .btn-primary{background:var(--red);color:#fff}
+    .btn-ghost{background:#181818;color:#ccc;border:1px solid #2e2e2e}
+    @media(max-width:920px){
+      .shell{grid-template-columns:1fr}
+      .sidebar{border-right:none;border-bottom:1px solid var(--line)}
+      .stats{grid-template-columns:1fr 1fr}
+      .panels{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand"><div class="orb"></div><h1>Threads<br>Command<br>Center</h1></div>
+    <p class="sub">Signal in. Noise out.<br>Posts ready for Notion.</p><br>
+    <div class="menu">
+      <button class="on">Dashboard</button>
+      <button>Source Intake</button>
+      <button>Idea Queue</button>
+      <button>Draft Builder</button>
+      <button>Notion Sync</button>
+    </div>
+    <p class="note">AI tech drops. Hard business takes. Legacy notes that hit.<br><br>Built for EMPOSSIBLE.</p>
+  </aside>
+  <main class="main">
+    <div class="topbar">
+      <div><h2>Command Center</h2><p>Reddit, X, YouTube, Product Hunt, GitHub, podcasts. One pipeline.</p></div>
+      <div class="badge">Live Idea Pool</div>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="lbl">Sources</div><div class="val">6</div><div class="desc">Active collectors</div></div>
+      <div class="stat"><div class="lbl">Ideas</div><div class="val" id="count-total">0</div><div class="desc">In queue</div></div>
+      <div class="stat"><div class="lbl">High Signal</div><div class="val" id="count-hot">0</div><div class="desc">Ready to write</div></div>
+      <div class="stat"><div class="lbl">Drafted</div><div class="val" id="count-draft">0</div><div class="desc">Ready for Notion</div></div>
+    </div>
+    <div class="filters" id="filters">
+      <button class="on" data-cat="All">All</button>
+      <button data-cat="AI Tech">AI Tech</button>
+      <button data-cat="Business">Business</button>
+      <button data-cat="Lifestyle">Lifestyle</button>
+    </div>
+    <div id="idea-pool"></div>
+    <div class="panels">
+      <div class="panel">
+        <h3>Backend Sources Plan</h3>
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead><tr style="color:var(--muted);text-transform:uppercase;font-size:11px;letter-spacing:.08em">
+            <th style="padding:8px 0;text-align:left">Source</th>
+            <th style="padding:8px 0;text-align:left">Method</th>
+            <th style="padding:8px 0;text-align:left">Status</th>
+          </tr></thead>
+          <tbody id="source-table"></tbody>
+        </table>
+        <div class="main-actions">
+          <button class="btn-primary" onclick="approveAll()">Approve All High Signal</button>
+          <button class="btn-ghost">Send to Notion</button>
+          <button class="btn-ghost">Refresh Sources</button>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>Workflow</h3>
+        <div class="wf-list">
+          <div class="wf-item"><strong>1. Collect</strong><span>RSS, API, transcripts, scrape fallback.</span></div>
+          <div class="wf-item"><strong>2. Sort</strong><span>Tag by AI tech, business, or legacy.</span></div>
+          <div class="wf-item"><strong>3. Score</strong><span>Rank by signal strength and hook clarity.</span></div>
+          <div class="wf-item"><strong>4. Write</strong><span>Turn winners into Threads posts.</span></div>
+          <div class="wf-item"><strong>5. Sync</strong><span>Push final drafts into Notion.</span></div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<script>
+const IDEAS = [
+  {id:"m1",source:"Reddit",title:"Nobody is actually prompting AI right. They treat it like Google.",url:"#",author:"u/rawfounder",snippet:"Thread blowing up about how people prompt AI with zero context. Founders are getting left behind.",score:98,category:"AI Tech",status:"high_signal",created_at:"2026-05-29"},
+  {id:"m2",source:"GitHub",title:"n8n AI content pipeline with Notion output. Stars climbing fast.",url:"#",author:"devuser",snippet:"Open source repo mapping out a full AI content workflow using n8n, OpenAI, and Notion API.",score:91,category:"AI Tech",status:"high_signal",created_at:"2026-05-28"},
+  {id:"m3",source:"YouTube",title:"$2M agency. 3 people. AI tools nobody in newsletters talks about.",url:"#",author:"Lex Fridman",snippet:"We do not use the tools everyone lists. We use the boring ones that actually work.",score:88,category:"Business",status:"queued",created_at:"2026-05-28"},
+  {id:"m4",source:"Podcast",title:"The one skill that separates $10k founders from $100k founders.",url:"#",author:"Sam Parr",snippet:"Most founders plateau at $10k MRR. It is not a product problem.",score:85,category:"Business",status:"draft",created_at:"2026-05-27"},
+  {id:"m5",source:"X",title:"AI visuals still look fake in 2026. Here is exactly why.",url:"#",author:"@designperson",snippet:"People specify prompts but not fabric, lighting, and context. That is why it looks plastic.",score:79,category:"AI Tech",status:"queued",created_at:"2026-05-29"},
+  {id:"m6",source:"Product Hunt",title:"New tool: podcast transcript to Threads post in one click.",url:"#",author:"maker_x",snippet:"1200 upvotes. Converts any podcast or YouTube transcript into social posts automatically.",score:74,category:"AI Tech",status:"queued",created_at:"2026-05-29"},
+  {id:"m7",source:"Reddit",title:"Gym discipline is the best metaphor for business nobody uses.",url:"#",author:"u/grindset",snippet:"Mapped gym consistency directly to building a company. Comments are raw and real.",score:70,category:"Lifestyle",status:"queued",created_at:"2026-05-27"}
+];
+const SOURCES = [
+  {source:"Reddit",method:"API / RSS",status:"Ready"},
+  {source:"X",method:"API or export",status:"Pending"},
+  {source:"YouTube",method:"Transcript + metadata",status:"Ready"},
+  {source:"Product Hunt",method:"Scrape / API",status:"Ready"},
+  {source:"GitHub",method:"API / RSS trending",status:"Ready"},
+  {source:"Podcasts",method:"RSS + transcripts",status:"Ready"}
+];
+let ideas = JSON.parse(JSON.stringify(IDEAS));
+let activeFilter = "All";
+function renderSourceTable(){
+  document.getElementById("source-table").innerHTML = SOURCES.map(s => `
+    <tr style="border-top:1px solid #252525">
+      <td style="padding:10px 0;font-size:13px">${s.source}</td>
+      <td style="padding:10px 8px;color:#aaa;font-size:13px">${s.method}</td>
+      <td style="padding:10px 0"><span style="font-size:11px;padding:4px 9px;border-radius:999px;
+        background:${s.status==="Ready"?"rgba(30,100,30,.3)":"rgba(100,70,0,.3)"};
+        color:${s.status==="Ready"?"#7dea7d":"#e8b84b"};
+        border:1px solid ${s.status==="Ready"?"rgba(80,200,80,.2)":"rgba(180,130,0,.25)"}">${s.status}</span></td>
+    </tr>`).join("");
+}
+function render(){
+  const filtered = activeFilter === "All" ? ideas : ideas.filter(i => i.category === activeFilter);
+  document.getElementById("count-total").textContent = ideas.length;
+  document.getElementById("count-hot").textContent = ideas.filter(i => i.status === "high_signal").length;
+  document.getElementById("count-draft").textContent = ideas.filter(i => i.status === "draft").length;
+  document.getElementById("idea-pool").innerHTML = filtered.sort((a,b) => b.score - a.score).map(i => {
+    const dot = i.status === "high_signal" ? "dot-high" : i.status === "draft" ? "dot-draft" : "dot-queue";
+    return `<div class="idea-card" id="card-${i.id}">
+      <div class="idea-top">
+        <div><span class="idea-source">${i.source}</span>&nbsp;&nbsp;<small style="color:var(--muted)">${i.author}</small></div>
+        <span class="idea-cat">${i.category}</span>
+      </div>
+      <div class="idea-title"><span class="status-dot ${dot}"></span>${i.title}</div>
+      <div class="idea-snippet">${i.snippet}</div>
+      <div class="idea-foot">
+        <div class="score-bar"><div class="score-fill" style="width:${i.score}%"></div></div>
+        <span class="score-lbl">Signal ${i.score}</span>
+        <div class="idea-actions">
+          <button class="btn-approve" onclick="writeThread('${i.id}')">Write Thread</button>
+          <button class="btn-draft" onclick="saveDraft('${i.id}')">Save Draft</button>
+          <button class="btn-skip" onclick="skip('${i.id}')">Skip</button>
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+}
+function writeThread(id){
+  const i = ideas.find(x => x.id === id);
+  if(!i) return;
+  alert("Thread writer coming next build.\n\nIdea loaded:\n" + i.title);
+}
+function saveDraft(id){
+  const i = ideas.find(x => x.id === id);
+  if(!i) return;
+  i.status = "draft";
+  render();
+}
+function skip(id){
+  const c = document.getElementById("card-" + id);
+  if(c) c.style.display = "none";
+}
+function approveAll(){
+  ideas.filter(i => i.status === "high_signal").forEach(i => { i.status = "draft"; });
+  render();
+}
+document.getElementById("filters").addEventListener("click", e => {
+  if(e.target.dataset.cat){
+    activeFilter = e.target.dataset.cat;
+    document.querySelectorAll(".filters button").forEach(b => b.classList.remove("on"));
+    e.target.classList.add("on");
+    render();
+  }
+});
+renderSourceTable();
+render();
+</script>
+</body>
+</html>
